@@ -1,5 +1,7 @@
 # Almacén clínico — inventario de insumos médicos
 
+[![CI](https://github.com/kevinloayza/clinic-inventory/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinloayza/clinic-inventory/actions/workflows/ci.yml)
+
 Aplicación full-stack para gestionar entradas y salidas de insumos de una clínica, con búsqueda de pacientes.
 Es la base de un proyecto de **CI/CD + QA automatizado** (Jest, Cypress, GitHub Actions).
 
