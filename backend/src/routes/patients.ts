@@ -18,7 +18,7 @@ export function patientsRouter(pool: Pool): Router {
     const { rows } = await pool.query(
       `SELECT id, full_name, dni, to_char(birth_date, 'YYYY-MM-DD') AS birth_date
          FROM patients
-        WHERE $1 = '' OR fullname ILIKE '%' || $1 || '%' OR dni LIKE $1 || '%'
+        WHERE $1 = '' OR full_name ILIKE '%' || $1 || '%' OR dni LIKE $1 || '%'
         ORDER BY full_name
         LIMIT 50`,
       [q],
