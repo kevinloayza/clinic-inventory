@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:   # botón "Run workflow" para volver a desplegar manualmente desde main
 
 # Si subes otro commit a la misma rama, cancela la ejecución anterior
 concurrency:
@@ -100,3 +101,65 @@ jobs:
       - name: Apagar contenedores
         if: always()
         run: docker compose down -v
+
+  # Despliegue continuo: solo corre en main, después de que AMBOS jobs de pruebas pasen.
+  # Se activa creando la variable de repositorio DEPLOY_ENABLED=true (ver README).
+  deploy:
+    name: deploy
+    needs: [backend-tests, e2e-tests]
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Preparar base de datos (Neon)
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npm ci
+          npm run db:init
+
+      - name: Desplegar backend (Render)
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}" -o /dev/null
+          echo "Despliegue del commit ${GITHUB_SHA} solicitado a Render"
+
+      - name: Esperar a que el backend nuevo esté en línea
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+        run: |
+          for i in $(seq 1 60); do
+            body=$(curl -sS --max-time 30 "${BACKEND_URL}/api/health" || true)
+            echo "Intento ${i}/60: ${body}"
+            if echo "${body}" | grep -q "\"commit\":\"${GITHUB_SHA}\""; then
+              echo "Backend en línea con el commit ${GITHUB_SHA}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::El backend no mostró el commit esperado en 10 minutos. Revisa el despliegue en el panel de Render."
+          exit 1
+
+      - name: Desplegar frontend (Vercel)
+        working-directory: frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx --yes vercel@65.2.0 deploy --prod --yes --token "$VERCEL_TOKEN"

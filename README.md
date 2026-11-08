@@ -97,7 +97,35 @@ npm run cy:run    # modo consola (el que usará el CI)
 
 Los flujos cubren: crear insumos, registrar entradas/salidas (incluida la salida bloqueada por stock insuficiente) y buscar pacientes por nombre y DNI.
 
-## Próximos pasos
+## Integración y despliegue continuos
 
-1. GitHub Actions + protección de la rama `main`
-2. Despliegue automático
+```
+Pull Request ──► backend-tests (Jest)  ──┐
+                 e2e-tests (Cypress)   ──┼─► ✅ merge permitido ─► push a main ─► deploy
+                                         └─► ❌ merge bloqueado
+```
+
+- **Protección de `main`:** un ruleset exige Pull Request y que `backend-tests` y `e2e-tests` pasen. Nadie sube código sin pruebas.
+- **Despliegue automático:** al entrar código a `main`, el job `deploy` (que depende de ambos jobs de pruebas) hace lo siguiente:
+  1. Aplica el esquema SQL a la base de producción.
+  2. Despliega el backend en Render pidiendo ese commit exacto, y espera a que `/api/health` informe esa versión.
+  3. Despliega el frontend en Vercel.
+
+| Pieza | Servicio | Nota |
+|---|---|---|
+| Frontend | Vercel (plan Hobby) | Sin integración Git: solo despliega el pipeline |
+| Backend | Render (Docker, plan free) | Se duerme tras 15 min sin tráfico; la primera petición tarda ~1 min |
+| Base de datos | Neon (plan free) | Se suspende tras 5 min inactiva; la primera consulta tarda un poco más |
+
+### Configuración (una sola vez)
+
+1. **Neon:** crea un proyecto (región AWS US East 2) y copia la cadena de conexión (`postgresql://…?sslmode=require`).
+2. **Render:** *New → Blueprint*, elige este repositorio y pega `DATABASE_URL`; en `CORS_ORIGIN` pon provisionalmente `http://localhost:3000`. Copia la URL del servicio y, en *Settings → Deploy Hook*, la URL del hook.
+3. **Vercel:** desde `frontend/` ejecuta `npx vercel login`, `npx vercel link` (responde **No** si ofrece conectar el repositorio de GitHub) y `npx vercel env add NEXT_PUBLIC_API_URL production` con la URL de Render. Crea un token en vercel.com/account/tokens. `orgId` y `projectId` están en `frontend/.vercel/project.json`.
+4. **GitHub → Settings → Secrets and variables → Actions:**
+   - *Secrets:* `DATABASE_URL`, `RENDER_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+   - *Variables:* `BACKEND_URL` (URL de Render, sin `/` final) y, al final, `DEPLOY_ENABLED` = `true`
+5. En **Render**, actualiza `CORS_ORIGIN` con la URL de producción de Vercel.
+6. Datos de ejemplo en producción (opcional, una vez): `cd backend && DATABASE_URL="..." npm run db:init -- --seed`
+7. **Actions → CI → Run workflow** (rama `main`) para el primer despliegue.
+

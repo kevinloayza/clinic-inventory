@@ -1,0 +1,17 @@
+# Blueprint de Render: define el backend. El despliegue lo dispara GitHub Actions
+# (deploy hook), por eso el auto-despliegue está apagado: nada se publica sin pasar las pruebas.
+services:
+  - type: web
+    name: clinic-inventory-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: ohio
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DATABASE_URL   # cadena de conexión de Neon
+        sync: false
+      - key: CORS_ORIGIN    # URL del frontend en Vercel (varias separadas por coma)
+        sync: false

@@ -12,10 +12,12 @@ import { suppliesRouter } from './routes/supplies';
 /** Fábrica de la app: recibe el pool para poder inyectar una BD de pruebas con Jest. */
 export function createApp(pool: Pool) {
   const app = express();
-  app.use(cors({ origin: process.env.CORS_ORIGIN ?? '*' }));
+  const origins = process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean);
+  app.use(cors({ origin: origins?.length ? origins : '*' }));
   app.use(express.json());
 
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+  // commit: lo informa Render; permite al pipeline comprobar qué versión quedó en línea
+  app.get('/api/health', (_req, res) => res.json({ status: 'ok', commit: process.env.RENDER_GIT_COMMIT ?? null }));
   app.use('/api/supplies', suppliesRouter(pool));
   app.use('/api/movements', movementsRouter(pool));
   app.use('/api/patients', patientsRouter(pool));

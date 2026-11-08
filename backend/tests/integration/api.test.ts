@@ -21,7 +21,18 @@ describe('GET /api/health', () => {
   it('responde ok', async () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok' });
+    expect(res.body.status).toBe('ok');
+  });
+
+  it('informa el commit desplegado cuando la plataforma lo entrega', async () => {
+    process.env.RENDER_GIT_COMMIT = 'abc123';
+    try {
+      const res = await request(app).get('/api/health');
+      expect(res.body.commit).toBe('abc123');
+    } finally {
+      delete process.env.RENDER_GIT_COMMIT;
+    }
+    expect((await request(app).get('/api/health')).body.commit).toBeNull();
   });
 });
 

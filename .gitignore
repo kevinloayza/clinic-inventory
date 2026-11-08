@@ -5,3 +5,4 @@ dist/
 coverage/
 cypress/videos/
 cypress/screenshots/
+.vercel
