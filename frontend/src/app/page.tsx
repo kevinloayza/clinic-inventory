@@ -1,9 +1,9 @@
 'use client';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
-import { api, type Supply } from '@/lib/api';
+import { api, fmtDate, type Supply } from '@/lib/api';
 
-const empty = { name: '', unit: '', stock: '0', min_stock: '0' };
+const empty = { name: '', unit: '', stock: '0', min_stock: '0', expiry: '' };
 
 export default function SuppliesPage() {
   const [supplies, setSupplies] = useState<Supply[]>([]);
@@ -30,7 +30,7 @@ export default function SuppliesPage() {
     e.preventDefault();
     setError('');
     try {
-      const body = { name: form.name, unit: form.unit, min_stock: Number(form.min_stock) };
+      const body = { name: form.name, unit: form.unit, min_stock: Number(form.min_stock), expiration_date: form.expiry || null };
       if (editingId) {
         await api(`/supplies/${editingId}`, { method: 'PUT', body: JSON.stringify(body) });
       } else {
@@ -46,7 +46,7 @@ export default function SuppliesPage() {
 
   function startEdit(s: Supply) {
     setEditingId(s.id);
-    setForm({ name: s.name, unit: s.unit, stock: String(s.stock), min_stock: String(s.min_stock) });
+    setForm({ name: s.name, unit: s.unit, stock: String(s.stock), min_stock: String(s.min_stock), expiry: s.expiration_date ?? '' });
   }
 
   async function remove(s: Supply) {
@@ -80,6 +80,9 @@ export default function SuppliesPage() {
           <label>Stock mínimo
             <input data-testid="supply-min" type="number" min={0} value={form.min_stock} onChange={set('min_stock')} />
           </label>
+          <label>Vencimiento (opcional)
+            <input data-testid="supply-expiry" type="date" value={form.expiry} onChange={set('expiry')} />
+          </label>
           <button type="submit" data-testid="supply-submit">{editingId ? 'Guardar cambios' : 'Agregar insumo'}</button>
           {editingId && (
             <button type="button" className="ghost" onClick={() => { setEditingId(null); setForm(empty); }}>Cancelar</button>
@@ -96,10 +99,12 @@ export default function SuppliesPage() {
             {supplies.length} {supplies.length === 1 ? 'insumo' : 'insumos'} registrados
             {' · '}
             {supplies.filter((s) => s.stock <= s.min_stock).length} con stock bajo
+            {' · '}
+            {supplies.filter((s) => s.expiration_status === 'vencido').length} vencidos
           </p>
           <table data-testid="supplies-table">
             <thead>
-              <tr><th>Insumo</th><th>Unidad</th><th className="num">Stock</th><th className="num">Mínimo</th><th>Estado</th><th><span className="sr">Acciones</span></th></tr>
+              <tr><th>Insumo</th><th>Unidad</th><th className="num">Stock</th><th className="num">Mínimo</th><th>Estado</th><th>Vencimiento</th><th><span className="sr">Acciones</span></th></tr>
             </thead>
             <tbody>
               {supplies.map((s) => {
@@ -111,6 +116,11 @@ export default function SuppliesPage() {
                     <td className="num" data-testid="stock-cell">{s.stock}</td>
                     <td className="num">{s.min_stock}</td>
                     <td>{low ? <span className="tag low">Stock bajo</span> : 'Normal'}</td>
+                    <td data-testid="expiry-cell">
+                      {s.expiration_date ? fmtDate(s.expiration_date) : '—'}{' '}
+                      {s.expiration_status === 'vencido' && <span className="tag expired">Vencido</span>}
+                      {s.expiration_status === 'por_vencer' && <span className="tag low">Por vencer</span>}
+                    </td>
                     <td>
                       <div className="actions">
                         <button className="ghost" onClick={() => startEdit(s)}>Editar</button>

@@ -52,6 +52,9 @@ cd frontend && npm install && cp .env.example .env.local && npm run dev
 - El **stock solo cambia mediante movimientos**, nunca editándolo directamente.
 - Una **salida mayor al stock disponible se rechaza** (HTTP 409). Se usa `SELECT … FOR UPDATE` dentro de una transacción para evitar condiciones de carrera.
 - DNI de 8 dígitos y único por paciente.
+- Los insumos tienen **fecha de vencimiento** opcional: se marcan *Por vencer* (30 días o menos) o *Vencido*, calculado con la fecha de Lima.
+
+> Si ya tenías la base creada antes de este cambio, ejecuta `docker compose down -v` para recrearla con la nueva columna (borra los datos de ejemplo).
 
 ## Estructura
 

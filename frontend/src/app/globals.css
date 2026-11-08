@@ -78,6 +78,7 @@ tr.low td:first-child { box-shadow: inset 4px 0 0 var(--warn-line); }
 
 .tag { display: inline-block; padding: 1px 9px; border-radius: 3px; font-size: 0.8rem; font-weight: 600; border: 1px solid transparent; }
 .tag.low { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
+.tag.expired { background: var(--bad-bg); color: var(--bad); border-color: #e0a8a8; }
 .tag.in { background: var(--ok-bg); color: var(--ok); border-color: #9ccdb0; }
 .tag.out { background: #e5eef6; color: #1b4a73; border-color: #9fbdd6; }
 .empty { padding: 32px; text-align: center; color: var(--muted); background: var(--panel); border: 1px dashed #aab5bf; border-radius: 4px; }
