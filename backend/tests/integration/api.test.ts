@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { createApp } from '../../src/app';
+import { todayInLima } from '../../src/services/expiration';
 import { createTestPool, resetDb } from '../helpers/db';
 
 const pool = createTestPool();
@@ -189,5 +190,59 @@ describe('Pacientes: registro', () => {
     await request(app).post('/api/patients').send(body);
     const res = await request(app).post('/api/patients').send({ ...body, full_name: 'Otra Persona' });
     expect(res.status).toBe(409);
+  });
+});
+
+describe('Insumos: fecha de vencimiento', () => {
+  const plusDays = (n: number): string => {
+    const [y, m, d] = todayInLima().split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+  };
+  const create = (expiration_date?: string | null) =>
+    request(app).post('/api/supplies').send({ name: 'Vacuna', unit: 'dosis', stock: 5, expiration_date });
+
+  it('guarda la fecha y la devuelve como AAAA-MM-DD, sin desfase de zona horaria', async () => {
+    const res = await create('2030-06-15');
+    expect(res.status).toBe(201);
+    expect(res.body.expiration_date).toBe('2030-06-15');
+    expect(res.body.expiration_status).toBe('vigente');
+  });
+
+  it('es opcional: sin fecha el estado es sin_fecha', async () => {
+    const res = await create();
+    expect(res.status).toBe(201);
+    expect(res.body.expiration_date).toBeNull();
+    expect(res.body.expiration_status).toBe('sin_fecha');
+  });
+
+  it('calcula el estado según la fecha', async () => {
+    const vencido = await create(plusDays(-1));
+    expect(vencido.body.expiration_status).toBe('vencido');
+    await resetDb(pool);
+    const porVencer = await create(plusDays(10));
+    expect(porVencer.body.expiration_status).toBe('por_vencer');
+  });
+
+  it.each(['2026-13-45', '2026-02-30', 'ayer', '15/06/2030'])('rechaza la fecha inválida %p con 400', async (fecha) => {
+    const res = await create(fecha);
+    expect(res.status).toBe(400);
+  });
+
+  it('se puede editar y también borrar al editar', async () => {
+    const s = (await create('2030-06-15')).body;
+    const base = { name: s.name, unit: s.unit, min_stock: 0 };
+
+    const changed = await request(app).put(`/api/supplies/${s.id}`).send({ ...base, expiration_date: '2031-01-01' });
+    expect(changed.body.expiration_date).toBe('2031-01-01');
+
+    const cleared = await request(app).put(`/api/supplies/${s.id}`).send({ ...base, expiration_date: null });
+    expect(cleared.body.expiration_date).toBeNull();
+    expect(cleared.body.expiration_status).toBe('sin_fecha');
+  });
+
+  it('el listado incluye fecha y estado de cada insumo', async () => {
+    await create('2000-01-01');
+    const res = await request(app).get('/api/supplies');
+    expect(res.body[0]).toMatchObject({ expiration_date: '2000-01-01', expiration_status: 'vencido' });
   });
 });

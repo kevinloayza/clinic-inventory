@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS supplies (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Migración: fecha de vencimiento (opcional). Idempotente, también actualiza bases ya existentes.
+ALTER TABLE supplies ADD COLUMN IF NOT EXISTS expiration_date DATE;
+
 CREATE TABLE IF NOT EXISTS movements (
   id          SERIAL PRIMARY KEY,
   supply_id   INTEGER NOT NULL REFERENCES supplies(id) ON DELETE CASCADE,

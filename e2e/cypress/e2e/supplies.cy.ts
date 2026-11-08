@@ -26,6 +26,29 @@ describe('Insumos', () => {
     cy.get(`[data-testid="supply-row-${name}"]`).should('contain', 'Stock bajo');
   });
 
+  it('registra un insumo con fecha de vencimiento y marca "Vencido"', () => {
+    const name = unique();
+    cy.visit('/');
+    cy.get('[data-testid=supply-expiry]').type('2020-01-31');
+    fillForm(name, '10', '1');
+    cy.get(`[data-testid="supply-row-${name}"]`)
+      .find('[data-testid=expiry-cell]')
+      .should('contain', '31/01/2020')
+      .and('contain', 'Vencido');
+  });
+
+  it('un insumo con vencimiento lejano no muestra alertas', () => {
+    const name = unique();
+    cy.visit('/');
+    cy.get('[data-testid=supply-expiry]').type('2099-12-31');
+    fillForm(name, '10', '1');
+    cy.get(`[data-testid="supply-row-${name}"]`)
+      .find('[data-testid=expiry-cell]')
+      .should('contain', '31/12/2099')
+      .and('not.contain', 'Vencido')
+      .and('not.contain', 'Por vencer');
+  });
+
   it('muestra un error al repetir el nombre de un insumo', () => {
     const name = unique();
     cy.createSupply(name, 5);

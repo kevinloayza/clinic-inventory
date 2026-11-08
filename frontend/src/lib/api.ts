@@ -1,6 +1,10 @@
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
-export type Supply = { id: number; name: string; unit: string; stock: number; min_stock: number };
+export type ExpirationStatus = 'sin_fecha' | 'vigente' | 'por_vencer' | 'vencido';
+export type Supply = {
+  id: number; name: string; unit: string; stock: number; min_stock: number;
+  expiration_date: string | null; expiration_status: ExpirationStatus;
+};
 export type Movement = {
   id: number; supply_id: number; supply_name: string; unit: string;
   type: 'in' | 'out'; quantity: number; note: string | null; created_at: string;

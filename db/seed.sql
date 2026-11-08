@@ -4,9 +4,10 @@ INSERT INTO patients (full_name, dni, birth_date) VALUES
   ('Lucía Paredes Vega',     '71234560', '1996-07-21')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO supplies (name, unit, stock, min_stock) VALUES
-  ('Paracetamol 500 mg',   'tabletas', 240, 100),
-  ('Jeringa 5 ml',         'unidades',  80,  50),
-  ('Guantes de nitrilo M', 'cajas',      6,  10),
-  ('Alcohol 70%',          'litros',    18,   5)
+-- Fechas relativas a hoy para que siempre haya un insumo vigente, uno por vencer y uno vencido
+INSERT INTO supplies (name, unit, stock, min_stock, expiration_date) VALUES
+  ('Paracetamol 500 mg',   'tabletas', 240, 100, CURRENT_DATE + 400),
+  ('Jeringa 5 ml',         'unidades',  80,  50, NULL),
+  ('Guantes de nitrilo M', 'cajas',      6,  10, CURRENT_DATE + 20),
+  ('Alcohol 70%',          'litros',    18,   5, CURRENT_DATE - 15)
 ON CONFLICT DO NOTHING;
