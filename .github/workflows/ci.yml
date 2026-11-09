@@ -162,4 +162,9 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx --yes vercel@65.2.0 deploy --prod --yes --token "$VERCEL_TOKEN"
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+        # NEXT_PUBLIC_API_URL se incrusta al compilar: se pasa desde aquí para que el
+        # frontend siempre apunte al backend de BACKEND_URL, sin depender del panel de Vercel
+        run: |
+          npx --yes vercel@65.2.0 deploy --prod --yes --token "$VERCEL_TOKEN" \
+            --build-env NEXT_PUBLIC_API_URL="$BACKEND_URL"
