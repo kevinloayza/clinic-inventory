@@ -2,10 +2,9 @@ import { Router } from 'express';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { HttpError } from '../errors';
-import { expirationStatus, todayInLima } from '../services/expiration';
-
-// to_char evita que el driver convierta la fecha a un Date con desfase de zona horaria
-const COLS = `id, name, unit, stock, min_stock, to_char(expiration_date, 'YYYY-MM-DD') AS expiration_date`;
+import { EXPIRING_SOON_DAYS, todayInLima } from '../services/expiration';
+import { SUPPLY_COLS as COLS, withStatus } from '../services/supplyView';
+import { optionalParam } from '../validation';
 
 const isRealDate = (s: string): boolean => {
   const d = new Date(`${s}T00:00:00Z`);
@@ -28,17 +27,28 @@ const base = {
 const createSchema = z.object({ ...base, stock: z.number().int().min(0).default(0) });
 const updateSchema = z.object(base);
 
-type SupplyRow = { expiration_date: string | null };
-const withStatus = <T extends SupplyRow>(row: T) => ({
-  ...row,
-  expiration_status: expirationStatus(row.expiration_date, todayInLima()),
+const listQuery = z.object({
+  q: optionalParam(z.string().trim().max(120)),
+  status: optionalParam(z.enum(['low', 'expiring', 'expired'])),
 });
 
 export function suppliesRouter(pool: Pool): Router {
   const r = Router();
 
-  r.get('/', async (_req, res) => {
-    const { rows } = await pool.query(`SELECT ${COLS} FROM supplies ORDER BY name`);
+  // ?q= busca por nombre; ?status= filtra por stock bajo, por vencer o vencidos
+  r.get('/', async (req, res) => {
+    const { q, status } = listQuery.parse(req.query);
+    const { rows } = await pool.query(
+      `SELECT ${COLS} FROM supplies
+        WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%')
+          AND ($2::text IS NULL
+               OR ($2 = 'low' AND stock <= min_stock)
+               OR ($2 = 'expired' AND expiration_date < $3::date)
+               OR ($2 = 'expiring' AND expiration_date >= $3::date
+                                   AND expiration_date <= $3::date + ${EXPIRING_SOON_DAYS}))
+        ORDER BY name`,
+      [q || null, status ?? null, todayInLima()],
+    );
     res.json(rows.map(withStatus));
   });
 

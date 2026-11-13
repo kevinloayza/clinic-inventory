@@ -5,6 +5,7 @@ import type { Pool } from 'pg';
 import { ZodError } from 'zod';
 import { HttpError } from './errors';
 import { InsufficientStockError } from './services/stock';
+import { dashboardRouter } from './routes/dashboard';
 import { movementsRouter } from './routes/movements';
 import { patientsRouter } from './routes/patients';
 import { suppliesRouter } from './routes/supplies';
@@ -18,6 +19,7 @@ export function createApp(pool: Pool) {
 
   // commit: lo informa Render; permite al pipeline comprobar qué versión quedó en línea
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', commit: process.env.RENDER_GIT_COMMIT ?? null }));
+  app.use('/api/dashboard', dashboardRouter(pool));
   app.use('/api/supplies', suppliesRouter(pool));
   app.use('/api/movements', movementsRouter(pool));
   app.use('/api/patients', patientsRouter(pool));

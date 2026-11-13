@@ -28,3 +28,7 @@ CREATE TABLE IF NOT EXISTS movements (
 );
 
 CREATE INDEX IF NOT EXISTS idx_movements_supply ON movements(supply_id, created_at DESC);
+
+-- Migración: una salida puede asignarse a un paciente (opcional)
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_movements_patient ON movements(patient_id);

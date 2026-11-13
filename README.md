@@ -5,6 +5,13 @@
 Aplicación full-stack para gestionar entradas y salidas de insumos de una clínica, con búsqueda de pacientes.
 Es la base de un proyecto de **CI/CD + QA automatizado** (Jest, Cypress, GitHub Actions).
 
+## Funcionalidades
+
+- **Resumen:** indicadores de insumos con stock bajo, por vencer y vencidos (cada uno abre el listado ya filtrado), lista de reposición y últimos movimientos.
+- **Insumos:** alta, edición y baja, con búsqueda por nombre, filtro por estado y exportación a CSV (compatible con Excel).
+- **Movimientos:** entradas y salidas con control de stock, entrega opcional a un paciente e historial filtrable por insumo y tipo.
+- **Pacientes:** alta, edición y baja, con búsqueda por nombre o DNI.
+
 ## Stack
 
 | Capa | Tecnología |
@@ -42,10 +49,12 @@ cd frontend && npm install && cp .env.example .env.local && npm run dev
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/health` | Estado del servicio |
-| GET / POST | `/api/supplies` | Listar / crear insumos |
+| GET | `/api/dashboard` | Indicadores, listas de reposición y vencimientos, últimos movimientos |
+| GET / POST | `/api/supplies` | Listar (`?q=` nombre, `?status=low\|expiring\|expired`) / crear |
 | PUT / DELETE | `/api/supplies/:id` | Editar (sin stock) / eliminar |
-| GET / POST | `/api/movements` | Historial / registrar entrada o salida |
+| GET / POST | `/api/movements` | Historial (`?supply_id=`, `?type=`, `?patient_id=`) / registrar entrada o salida |
 | GET / POST | `/api/patients` | Buscar (`?q=` por nombre o DNI) / registrar |
+| PUT / DELETE | `/api/patients/:id` | Editar / eliminar (los movimientos se conservan) |
 
 ## Reglas de negocio
 
