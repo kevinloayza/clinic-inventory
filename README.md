@@ -1,4 +1,4 @@
-# Almacén clínico — inventario de insumos médicos
+# Almacén clínico 
 
 [![CI](https://github.com/kevinloayza/clinic-inventory/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinloayza/clinic-inventory/actions/workflows/ci.yml)
 
